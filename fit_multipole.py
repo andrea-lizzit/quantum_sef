@@ -2,6 +2,7 @@
 
 import numpy as np
 from collections import namedtuple
+from dyson import dyson
 
 Pole = namedtuple("Pole", ["a", "b"])
 MPParams = namedtuple("MPParams", ["bias", "poles"])
@@ -78,18 +79,6 @@ def fit_multipole(z, s, n_poles, delta=0.1, iterations=10000):
 		vchi2 = new_vchi2
 		
 	return params, vchi2
-
-def dyson(E0, correlation, precision=0.01):
-	E = E0
-	while True:
-		print(f"new E: {E}")
-		E = E0 + correlation(E0)
-		if abs(E0 - E) < precision * abs(E0):
-			break
-		if abs(E0 - E) > abs(E0):
-			raise RuntimeError("self-consistent calculation diverges")
-		E0 = E
-	return E
 
 if __name__ == "__main__":
 	import csv, argparse, yaml
