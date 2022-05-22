@@ -3,6 +3,7 @@
 import numpy as np
 from collections import namedtuple
 from dyson import dyson
+from qe_utils import load_qe_se
 
 Pole = namedtuple("Pole", ["a", "b"])
 MPParams = namedtuple("MPParams", ["bias", "poles"])
@@ -93,33 +94,8 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	# read files up to row n_fit
-	real, rfreq, im, ifreq = [], [], [], []
-	with open(args.file_real, "r") as fd:
-		realreader = csv.reader(fd, delimiter=' ', skipinitialspace=True)
-		for i, row in enumerate(realreader):
-			if float(row[0]) < 0:
-				continue
-			rfreq.append(float(row[0]))
-			real.append(float(row[2]))
-			if i+1 == args.n_fit:
-				pass
+	z, s = load_qe_se(args.file_real, args.file_im, args.n_fit)
 
-	with open(args.file_im, "r") as fd:
-		imreader = csv.reader(fd, delimiter=' ', skipinitialspace=True)
-		for i, row in enumerate(imreader):
-			if float(row[0]) < 0:
-				continue
-			ifreq.append(float(row[0]))
-			im.append(float(row[2]))
-			if i+1 == args.n_fit:
-				pass
-	
-	if rfreq != ifreq:
-		print("error: real freq and im freq are different")
-	freq = rfreq
-
-	z = list(map(lambda i: complex(0, i), freq))
-	s = list(map(complex, real, im))
 	params, vchi2 = fit_multipole(z, s, args.n_poles, iterations=args.iterations)
 
 	print(f"chi2: {vchi2}")	
