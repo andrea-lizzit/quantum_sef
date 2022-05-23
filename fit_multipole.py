@@ -94,7 +94,7 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	# read files up to row n_fit
-	z, s = load_qe_se(args.file_real, args.file_im, args.n_fit)
+	z, s = load_qe_se(args.file_real, args.file_im, args.n_fit, positive=True)
 
 	params, vchi2 = fit_multipole(z, s, args.n_poles, iterations=args.iterations)
 
