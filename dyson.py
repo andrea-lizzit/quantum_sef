@@ -54,39 +54,59 @@ if __name__ == "__main__":
 	
 	if args.subparser == "gwwparams":
 		print("starting dyson from gww")
-		params = load_gww_fit(args.gww_out)[4]
 		E = load_gww_energies(args.gww_out)
-		def correlation(z):
-			return multipole(z, params)
-		offset = (E[5]["DFT"] + E[6]["DFT"]) / (2 * RY)
-		print(f'offset {offset} = {E[5]["DFT"]} + {E[6]["DFT"]} / 2RY')
-		E0 = E[5]["DFT"]/RY - offset
-		E0 = complex(E0, 0)
-		E0 = E[5]["HF-pert"]/RY - offset + correlation(E0)
 
-		print(f"starting dyson self-consistent calculation with offset {offset}, E0={E0 + offset}")
-		E = dyson_s(E[5]["HF-pert"] / RY - offset, E0, correlation)
-		E += offset
-		E *= RY
-		print(f"GW energy: {E}")
+		def correlation(orbital_i):
+			params = load_gww_fit(args.gww_out)[orbital_i-1]
+			def inner(z):
+				if np.real(z) > 0:
+					return multipole(z, params)
+				else:
+					sigma = multipole(np.conj(z), params) # like in qe
+					return np.conj(sigma)
+			return inner
+
+		offset = (E[5]["DFT"] + 0) / (2 * RY)
+		print(f'offset {offset} = {E[5]["DFT"]} + {0} / 2RY')
+
+		def GW(qe_E, correlation):
+			E0 = qe_E["DFT"]/RY - offset
+			E0 = complex(E0, 0)
+			E0 = qe_E["HF-pert"]/RY - offset + correlation(E0)
+
+			E = dyson_s(qe_E["HF-pert"] / RY - offset, E0, correlation)
+			E += offset
+			E *= RY
+			return E
+
+		for i in range(1, len(E)+1):
+			E[i]["GWC"] = GW(E[i], correlation(i))
+			print(f"state {i}; GW energy: {E[i]['GWC']:.7}")
+		for i in range(1, len(E)+1):
+			print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}")
 
 		if args.self_energy:
 			prefix, suffix = args.self_energy.split(",")
 			filename_real, filename_imag = prefix + "-re_on_im" + suffix, prefix + "-im_on_im" + suffix
-			qe_data = load_qe_se(filename_real, filename_imag)
+			orbital_i = int(suffix)
+			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
 			z, s = qe_data["z"], qe_data["s"]
-			fit_s = [multipole(vz, params) for vz in z]
+			fit_s = [correlation(orbital_i)(vz) for vz in z]
 			z, s, fit_s = np.array(z), np.array(s), np.array(fit_s)
 			fig, ax = plt.subplots(2)
-			ax[0].plot(np.imag(z), np.real(fit_s), label="fit s real")
 			ax[0].plot(np.imag(z), np.real(s), label="reference s real")
-			ax[0].plot(np.imag(z), np.imag(fit_s), label="fit s imag")
 			ax[0].plot(np.imag(z), np.imag(s), label="reference s imag")
-			ax[0].plot(np.imag(z), np.real(qe_data["fit_imag"]), label="qe fit re (im axis)")
-			ax[0].plot(np.imag(z), np.imag(qe_data["fit_imag"]), label="qe fit im (im axis)")	
+			ax[0].plot(np.imag(z), np.real(fit_s), dashes=[2, 2], label="fit (qe) real")
+			ax[0].plot(np.imag(z), np.imag(fit_s), dashes=[2, 2], label="fit (qe) imag")
+			ax[0].plot(np.imag(z), np.real(qe_data["fit_imag"]), dashes=[3, 2], label="fit (qe param) re (im axis)")
+			ax[0].plot(np.imag(z), np.imag(qe_data["fit_imag"]), dashes=[3, 2], label="fit (qe param) im (im axis)")	
 			ax[0].legend()
-			ax[1].plot(np.imag(z), np.real(qe_data["fit_real"]), label="qe fit re (re axis)")
-			ax[1].plot(np.imag(z), np.imag(qe_data["fit_real"]), label="qe fit re (im axis)")
+			ax[1].plot(np.imag(z), np.real(qe_data["fit_real"]), label="fit (qe) re (re axis)")
+			ax[1].plot(np.imag(z), np.imag(qe_data["fit_real"]), label="fit (qe) im (re axis)")
+			y = list(map(correlation(orbital_i), z*(-1j)))
+			ax[1].plot(np.imag(z), np.real(y), dashes=[2, 2], label="fit (qe param) re (re axis)")
+			ax[1].plot(np.imag(z), np.imag(y), dashes=[2, 2], label="fit (qe param) im (re axis)")
+			ax[1].legend()
 			plt.show()
 
 	elif args.subparser == "a":
