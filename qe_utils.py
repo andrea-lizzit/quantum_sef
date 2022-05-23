@@ -37,31 +37,35 @@ def load_gww_energies(filename):
 
 def load_qe_se(file_real, file_im, n_fit=None):
 	"Load the self energy values from a quantum-espresso file"
-	real, rfreq, im, ifreq = [], [], [], []
+	real, imag = [], []
 	with open(file_real, "r") as fd:
 		realreader = csv.reader(fd, delimiter=' ', skipinitialspace=True)
 		for i, row in enumerate(realreader):
 			if float(row[0]) < 0:
 				continue
-			rfreq.append(float(row[0]))
-			real.append(float(row[2]))
+			row = list(map(float, row))
+			real.append(row)
 			if i+1 == n_fit:
 				pass
+
+	rfreq, rqefitim, rse, rqefitr = list(zip(*real))
 
 	with open(file_im, "r") as fd:
 		imreader = csv.reader(fd, delimiter=' ', skipinitialspace=True)
 		for i, row in enumerate(imreader):
 			if float(row[0]) < 0:
 				continue
-			ifreq.append(float(row[0]))
-			im.append(float(row[2]))
+			row = list(map(float, row))
+			imag.append(row)
 			if i+1 == n_fit:
 				pass
-				
+	
+	ifreq, iqefitim, ise, iqefitr = list(zip(*real))
 	if rfreq != ifreq:
 		raise RuntimeError("error: real freq and im freq are different")
 	freq = rfreq
-
+	qefitim = list(map(complex, rqefitim, iqefitim))
+	se = list(map(complex, rse, ise))
+	qefitr = list(map(complex, rqefitr, iqefitr))
 	z = list(map(lambda i: complex(0, i), freq))
-	s = list(map(complex, real, im))
-	return z, s
+	return {"z": z, "s": se, "fit_imag": qefitim, "fit_real": qefitr}
