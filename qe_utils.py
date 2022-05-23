@@ -24,7 +24,7 @@ def load_gww_fit(filename):
 	return params
 
 def load_gww_energies(filename):
-	pattern_energy = "State:\s+(\d)DFT\s+:\s+(\S+)+ GW-PERT\s+:\s+(\S+) GW\s+:\s+(\S+) HF-pert\s+:\s+(\S+)\n"
+	pattern_energy = "State:\s+(\d)(?:DFT|LDA)\s+:\s+(\S+)+ GW-PERT\s+:\s+(\S+) GW\s+:\s+(\S+) HF-pert\s+:\s+(\S+)\n"
 	with open(filename, "r") as fd:
 		gww_out = fd.readlines()
 	gww_out = "".join(gww_out)
@@ -35,13 +35,13 @@ def load_gww_energies(filename):
 		E[orbital_i] = {"DFT": float(state[1]), "GW-PERT": float(state[2]), "GW": float(state[3]), "HF-pert": float(state[4])}
 	return E		
 
-def load_qe_se(file_real, file_im, n_fit=None):
+def load_qe_se(file_real, file_im, n_fit=None, positive=False):
 	"Load the self energy values from a quantum-espresso file"
 	real, imag = [], []
 	with open(file_real, "r") as fd:
 		realreader = csv.reader(fd, delimiter=' ', skipinitialspace=True)
 		for i, row in enumerate(realreader):
-			if float(row[0]) < 0:
+			if positive and float(row[0]) < 0:
 				continue
 			row = list(map(float, row))
 			real.append(row)
@@ -60,7 +60,7 @@ def load_qe_se(file_real, file_im, n_fit=None):
 			if i+1 == n_fit:
 				pass
 	
-	ifreq, iqefitim, ise, iqefitr = list(zip(*real))
+	ifreq, iqefitim, ise, iqefitr = list(zip(*imag))
 	if rfreq != ifreq:
 		raise RuntimeError("error: real freq and im freq are different")
 	freq = rfreq
