@@ -53,7 +53,7 @@ def load_qe_se(file_real, file_im, n_fit=None, positive=False):
 	with open(file_im, "r") as fd:
 		imreader = csv.reader(fd, delimiter=' ', skipinitialspace=True)
 		for i, row in enumerate(imreader):
-			if float(row[0]) < 0:
+			if positive and float(row[0]) < 0:
 				continue
 			row = list(map(float, row))
 			imag.append(row)
@@ -62,7 +62,10 @@ def load_qe_se(file_real, file_im, n_fit=None, positive=False):
 	
 	ifreq, iqefitim, ise, iqefitr = list(zip(*imag))
 	if rfreq != ifreq:
-		raise RuntimeError("error: real freq and im freq are different")
+		for a, b in list(zip(rfreq, ifreq)):
+			if a != b:
+				print(f"a = {a}, b = {b}")
+		raise ValueError("Frequencies do not match")
 	freq = rfreq
 	qefitim = list(map(complex, rqefitim, iqefitim))
 	se = list(map(complex, rse, ise))

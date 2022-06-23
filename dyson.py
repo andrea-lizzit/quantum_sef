@@ -46,10 +46,10 @@ if __name__ == "__main__":
 	p_loadparams = subparsers.add_parser("gwwparams")
 	p_loadparams.add_argument("gww_out", help="filename of the gww output")
 	p_loadparams.add_argument("--self_energy", "-s", help="qe self-energy file for comparison")
-	p_a = subparsers.add_parser("a")
-	p_a.add_argument("self_energy", help="prefix of name of the file containing the self-energy values")
-	p_a.add_argument("file_index", help="index suffix of the file")
-	p_a.add_argument("HF_energies", help="yaml file containing Hartree-Fock energies of HOMO, LUMO, and target")
+	p_a = subparsers.add_parser("gwwfit")
+	p_a.add_argument("self_energy", help="prefix and suffix of name of the file containing the self-energy values")
+	p_a.add_argument("gww_out", help="filename of the gww output")
+	p_a.add_argument("--qe", action="store_true", help="use qe self-energy")
 	args = parser.parse_args()
 	
 	if args.subparser == "gwwparams":
@@ -78,11 +78,11 @@ if __name__ == "__main__":
 			E += offset
 			E *= RY
 			return E
-
-		for i in range(1, len(E)+1):
+		orbitals = load_gww_energies(args.gww_out).keys()
+		for i in orbitals:
 			E[i]["GWC"] = GW(E[i], correlation(i))
 			print(f"state {i}; GW energy: {E[i]['GWC']:.7}")
-		for i in range(1, len(E)+1):
+		for i in orbitals:
 			print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}")
 
 		if args.self_energy:
@@ -109,30 +109,27 @@ if __name__ == "__main__":
 			ax[1].legend()
 			plt.show()
 
-	elif args.subparser == "a":
-		with open(args.HF_energies, "r") as fd:
-			energies = yaml.safe_load(fd)
-			e_HOMO, e_LUMO, e_target = energies["HOMO"]*RY, energies["LUMO"]*RY, energies["target"]*RY
-	
-		real, rfreq = [], []
-		filename_real = args.self_energy + "-re_on_im" + args.file_index
-		filename_imag = args.self_energy + "-im_on_im" + args.file_index
-		with open(filename_real, "r") as fd:
-			realreader = csv.reader(fd, delimiter=' ', skipinitialspace=True)
-			for i, row in enumerate(realreader):
-				rfreq.append(float(row[0]))
-				real.append(float(row[3]))
+	elif args.subparser == "gwwfit":
+		E = load_gww_energies(args.gww_out)
+
+		if args.qe:
+			prefix, suffix = args.self_energy.split(",")
+			filename_real = prefix + "-re_on_im" + suffix
+			filename_imag = prefix + "-im_on_im" + suffix
+			se_data = load_qe_se(filename_real, filename_imag)
 
 		def correlation(w):
-			for i in range(len(rfreq)-1):
-				if w1 := rfreq[i] < w and (w2 := rfreq[i+1]) >= w:
-					return (real[i] * (w - w1) + real[i+1] * (w2 - w)) / (w2 - w1)
+			for i in range(len(se_data["z"])-1):
+				if (w1 := np.imag(se_data["z"][i])) < np.real(w) and (w2 := np.imag(se_data["z"][i+1])) >= np.real(w):
+					return (se_data["fit_real"][i] * (w - w1) + se_data["fit_real"][i+1] * (w2 - w)) / (w2 - w1)
 	
-		offset = (e_LUMO + e_HOMO) / 2
-		E0 = e_target - offset
-		E0 = np.complex(E0, 0)
+		index = int(suffix)
+		offset = (E[5]["DFT"] + 0) / (2 * RY)
+		E0 = E[index]["DFT"]/RY - offset
+		E0 = complex(E0, 0)
+		E0 = E[index]["HF-pert"]/RY - offset + correlation(E0)
 
-		E = dyson(E0, correlation)
+		E = dyson_s(E[index]["HF-pert"] / RY - offset, E0, correlation)
 		E += offset
 		E *= RY
 		print(f"GW energy: {E}")
