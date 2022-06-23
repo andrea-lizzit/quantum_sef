@@ -48,25 +48,19 @@ def GW(qe_E, correlation):
 	E *= RY
 	return E
 
-def model_qe(gww_out, orbital):
-	params = load_gww_fit(gww_out)[orbital-1]
-	def inner(z):
-		if np.real(z) > 0:
-			return multipole(z, params)
-		else:
-			sigma = multipole(np.conj(z), params) # like in qe
-			return np.conj(sigma)
-	return inner
 
 if __name__ == "__main__":
 	import csv, argparse, yaml
 	import matplotlib.pyplot as plt
 	parser = argparse.ArgumentParser()
-	parser.add_argument("--orbital")
+	parser.add_argument("--orbital", type=int)
 	subparsers = parser.add_subparsers(dest="subparser")
+	parser.add_argument("gww_out", help="filename of the gww output")
 	p_loadparams = subparsers.add_parser("gwwparams")
-	p_loadparams.add_argument("gww_out", help="filename of the gww output")
 	p_loadparams.add_argument("--self_energy", "-s", help="qe self-energy file for comparison")
+	p_multipole = subparsers.add_parser("multipole")
+	p_multipole.add_argument("prefix")
+	p_multipole.add_argument("n_poles", type=int)
 	p_a = subparsers.add_parser("gwwfit")
 	p_a.add_argument("self_energy", help="prefix and suffix of name of the file containing the self-energy values")
 	p_a.add_argument("gww_out", help="filename of the gww output")
@@ -83,13 +77,20 @@ if __name__ == "__main__":
 	print(f'offset {offset} = {E[5]["DFT"]} + {0} / 2RY')
 
 	if args.subparser == "gwwparams":
-		get_model = lambda orbital: model_qe(args.gww_out, orbital)
+		get_model = lambda orbital: fit.fit("qe", args.gww_out, orbital)
+	if args.subparser == "multipole":
+		def get_model(orbital):
+			filename_real = args.prefix + "-re_on_im0000" + str(orbital)
+			filename_imag = args.prefix + "-im_on_im0000" + str(orbital)
+			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
+			z, s = qe_data["z"], qe_data["s"]
+			return fit.fit("multipole", z, s, args.n_poles)
 	# orbitals = load_gww_energies(args.gww_out).keys()
 	for i in orbitals:
 		E[i]["GWC"] = GW(E[i], get_model(i))
 		# print(f"state {i}; GW energy: {E[i]['GWC']:.7}")
 	for i in orbitals:
-		print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}\t correct: {np.real(E[i]['GW']):.7}")
+		print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}\tstarting: {np.real(E[i]['HF-pert']):.7}\tcorrect: {np.real(E[i]['GW']):.7}")
 
 	if args.self_energy:
 		prefix, suffix = args.self_energy.split(",")

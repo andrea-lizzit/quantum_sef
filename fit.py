@@ -6,10 +6,13 @@ import jax.numpy as jnp
 from dyson import dyson
 from qe_utils import load_qe_se
 from multipole.model_multipole import model_multipole
+from multipole.model_qe import model_qe
 
-def fit(z, s, method="multipole", **kwargs):
+def fit(method, *args, **kwargs):
+	if method == "qe":
+		return model_qe(*args, **kwargs)
 	if method == "multipole":
-		return model_multipole(z, s, **kwargs)
+		return model_multipole(*args, **kwargs)
 	return None
 
 if __name__ == "__main__":

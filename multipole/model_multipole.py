@@ -42,6 +42,7 @@ def complex_chi2(a, b):
 
 
 def fit_mpparams(z, s, n_poles):
+	z, s = jnp.array(z), jnp.array(s)
 	# parameter initialization (taken from quantum espresso)
 	poles = []
 	for i in range(1, n_poles+1):
@@ -60,9 +61,9 @@ def fit_mpparams(z, s, n_poles):
 		return complex_chi2(y, s)
 
 	gf = jax.grad(loss)
-	print(f"chi iniziale {loss(x0)} \ngrad iniziale {gf(x0)}")
+	# print(f"chi iniziale {loss(x0)} \ngrad iniziale {gf(x0)}")
 	res = scipy.optimize.minimize(fun=loss, x0=x0, jac=gf, method="BFGS")
-	print(f"chi finale {loss(res.x)} \ngrad finale {gf(res.x)}")
+	# print(f"chi finale {loss(res.x)} \ngrad finale {gf(res.x)}")
 	#res = scipy.optimize.minimize(fun=loss, x0=res.x, jac=gf, method="Nelder-Mead", options={'disp': True})
 	#print(f"chi finale {loss(res.x)} \ngrad finale {gf(res.x)}")
 
