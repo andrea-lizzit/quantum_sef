@@ -1,9 +1,10 @@
 import numpy as np
 import csv, re
-from common import *
+from multipole.common import *
 
 
 def load_gww_fit(filename):
+	""" Returns a list of MPParams from qe calculations, one for each orbital """
 	with open(filename, "r") as fd:
 		gww_out = fd.readlines()
 	gww_out = "".join(gww_out)

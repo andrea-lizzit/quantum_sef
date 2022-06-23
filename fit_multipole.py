@@ -1,18 +1,23 @@
 #!/usr/bin/env python
 
-from email import message
 import numpy as np
 import jax
 import jax.numpy as jnp
-from jax.scipy import optimize
 import scipy.optimize
 from collections import namedtuple
 from dyson import dyson
-from qe_utils import load_qe_se, load_gww_energies
+from qe_utils import load_qe_se
 
 
 Pole = namedtuple("Pole", ["a", "b"])
 MPParams = namedtuple("MPParams", ["bias", "poles"])
+
+def multipole(z, params):
+	"""Multipole function to fit."""
+	v = params.bias
+	for pole in params.poles:
+		v += pole.a / (z - pole.b)
+	return v
 
 def make_mpparams(x):
 	""" Get a numpy array of reals and return an MPParams object """
@@ -47,13 +52,7 @@ def chi2_jax(z, s, f):
 	vf = jax.vmap(resf)
 	res = vf(z, s)
 	return res.sum()
-	
-def multipole(z, params):
-	"""Multipole function to fit."""
-	v = params.bias
-	for pole in params.poles:
-		v += pole.a / (z - pole.b)
-	return v
+
 
 def fit_multipole_jax(z, s, n_poles):
 	# parameter initialization (taken from quantum espresso)
