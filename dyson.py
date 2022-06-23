@@ -89,7 +89,7 @@ if __name__ == "__main__":
 		E[i]["GWC"] = GW(E[i], get_model(i))
 		# print(f"state {i}; GW energy: {E[i]['GWC']:.7}")
 	for i in orbitals:
-		print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}\t correct: {np.real(E[i]['GW-PERT']):.7}")
+		print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}\t correct: {np.real(E[i]['GW']):.7}")
 
 	if args.self_energy:
 		prefix, suffix = args.self_energy.split(",")
