@@ -1,17 +1,52 @@
 #!/usr/bin/env python
 
+from email import message
 import numpy as np
+import jax
+import jax.numpy as jnp
+from jax.scipy import optimize
+import scipy.optimize
 from collections import namedtuple
 from dyson import dyson
-from qe_utils import load_qe_se
+from qe_utils import load_qe_se, load_gww_energies
+
 
 Pole = namedtuple("Pole", ["a", "b"])
 MPParams = namedtuple("MPParams", ["bias", "poles"])
+
+def make_mpparams(x):
+	""" Get a numpy array of reals and return an MPParams object """
+	if len(x) % 4 != 2:
+		raise ValueError()
+	n_poles = (len(x)-1)//4
+	poles = []
+	for i in range(n_poles):
+		a = x[2+4*i] + x[3+4*i]*1j
+		b = x[4+4*i] + x[5+4*i]*1j
+		poles.append(Pole(a=a, b=b))
+	params = MPParams(bias=x[0] + x[1]*1j, poles=poles)
+	return params
+
+def unmake_params(params):
+	""" Get an MPParams object and return a numpy array of reals """
+	x = [np.real(params.bias), np.imag(params.bias)]
+	for pole in params.poles:
+		x.append(np.real(pole.a))
+		x.append(np.imag(pole.a))
+		x.append(np.real(pole.b))
+		x.append(np.imag(pole.b))
+	return np.array(x)
 
 def chi2(z, s, f):
 	res = np.array(list(map(lambda vz, vs: f(vz) - vs, z, s)))
 	chi2 = np.sum(np.absolute(res)**2)
 	return chi2
+
+def chi2_jax(z, s, f):
+	resf = lambda vz, vs: jnp.abs(f(vz) - vs)**2
+	vf = jax.vmap(resf)
+	res = vf(z, s)
+	return res.sum()
 	
 def multipole(z, params):
 	"""Multipole function to fit."""
@@ -19,6 +54,30 @@ def multipole(z, params):
 	for pole in params.poles:
 		v += pole.a / (z - pole.b)
 	return v
+
+def fit_multipole_jax(z, s, n_poles):
+	# parameter initialization (taken from quantum espresso)
+	poles = []
+	for i in range(1, n_poles+1):
+		a = complex(i, 0)
+		b = complex(i*0.5 * (-1)**i, -0.01)
+		poles.append(Pole(a=a, b=b))
+
+	params = MPParams(bias = 0, poles = poles)
+	x0 = unmake_params(params)
+	
+	def loss(x):
+		params = make_mpparams(x)
+		return chi2_jax(z, s, lambda vz: multipole(vz, params))
+
+	gf = jax.grad(loss)
+	print(f"chi iniziale {loss(x0)} \ngrad iniziale {gf(x0)}")
+	res = scipy.optimize.minimize(fun=loss, x0=x0, jac=gf, method="BFGS")
+	print(f"chi finale {loss(res.x)} \ngrad finale {gf(res.x)}")
+	if not res.success:
+		print(f"optimization failed, reason: {res.message}")
+	return make_mpparams(res.x), res.fun
+
 
 def fit_multipole(z, s, n_poles, delta=0.1, iterations=10000):
 	"""Fit a multipole function."""
@@ -94,11 +153,13 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	# read files up to row n_fit
-	z, s = load_qe_se(args.file_real, args.file_im, args.n_fit, positive=True)
+	t = load_qe_se(args.file_real, args.file_im, args.n_fit, positive=True)
+	z, s = jnp.array(t['z']), jnp.array(t['s'])
 
-	params, vchi2 = fit_multipole(z, s, args.n_poles, iterations=args.iterations)
+	#params, vchi2 = fit_multipole(z, s, args.n_poles, iterations=args.iterations)
+	params, vchi2 = fit_multipole_jax(z, s, args.n_poles)
 
-	print(f"chi2: {vchi2}")	
+	print(f"chi2: {vchi2}")
 	print(f"a_0: {params.bias}")
 	for pole in params.poles:
 		print(f"a: {pole.a}\tb: {pole.b}")
