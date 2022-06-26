@@ -186,7 +186,7 @@ def model_pade(z, s, M=range(50, 99, 4), N=range(50, 99, 4), n0=[1], plot=True, 
 				raise ValueError()
 			if n > m:
 				continue
-			samples_i = np.linspace(len(z)*0., 0.25*len(z)-1, num=m, dtype=np.int)
+			samples_i = np.linspace(0, len(z)-1, num=m, dtype=np.int)
 			r = n // 2
 			pparams = lspparams(r, z[samples_i], s[samples_i], **kwargs)
 			models.append(model := PadeModel(pparams))
