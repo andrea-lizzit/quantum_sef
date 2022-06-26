@@ -3,6 +3,7 @@
 import numpy as np
 from qe_utils import load_gww_energies, load_gww_fit, load_qe_se
 import fit
+import logging
 
 RY = 13.605693122994
 
@@ -54,6 +55,7 @@ if __name__ == "__main__":
 	import matplotlib.pyplot as plt
 	from jax.config import config
 	config.update("jax_enable_x64", True)
+	logging.basicConfig(filename='quantum-sef.log', level=logging.INFO)
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--orbital", type=int)

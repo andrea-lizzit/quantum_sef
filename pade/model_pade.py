@@ -1,3 +1,4 @@
+import logging
 from numbers import Complex, Real
 from tkinter import N
 from typing import Union
@@ -16,20 +17,20 @@ class LossInfo():
 		self.interval = interval
 		self.jac = jac
 	def __call__(self, x):
-		# print value if it is different from last
+		""" Log value if it is different from last or an interbal has passed """
 		self.i += 1
 		value = self.loss(x)
 		if self.lastvalue is None or self.lastvalue != value and self.i%self.interval == 0:
 			if self.jac:
-				print(f"{self.i}: {value}\tgradient norm: {np.linalg.norm(self.jac(x))}")
+				logging.debug(f"{self.i}: {value}\tgradient norm: {np.linalg.norm(self.jac(x))}")
 			else:
-				print(f"{self.i}: {value}")
+				logging.debug(f"{self.i}: {value}")
 			self.lastvalue = value
 		return False
 		
 
 def real_to_complex(x: Union[list, np.ndarray, jnp.ndarray]):
-	# split real and imaginary parts
+	""" Split real and imaginary parts of x """
 	return x[:len(x)//2] + 1j * x[len(x)//2:]
 
 def pade_real_loss(A, b):
@@ -50,6 +51,7 @@ def pade_real_loss_jax(A, b):
 	return loss
 
 def pade_model_loss(z, s):
+	""" Loss function as MSE with respect to s """
 	def loss(rparams):
 		pparams = real_to_complex(rparams)
 		a = pparams[0:len(pparams)//2]
@@ -68,7 +70,7 @@ def pade_model_loss(z, s):
 	return loss
 
 def complex_to_real(x: Union[np.ndarray, jnp.ndarray]):
-	# concatenate real and imaginary parts of x
+	""" Concatenate real and imaginary parts of x """
 	if isinstance(x, np.ndarray):
 		return np.concatenate((np.real(x), np.imag(x)))
 	elif isinstance(x, jnp.ndarray):
@@ -76,7 +78,7 @@ def complex_to_real(x: Union[np.ndarray, jnp.ndarray]):
 	else:
 		return TypeError()
 
-def lspparams(r, z, s):
+def lspparams(r, z, s, precise=False, precondition=False):
 	""" Least squares inversion of M*2r matrix that fits s """
 	if (M := len(z)) != len(s):
 		raise ValueError()
@@ -86,44 +88,47 @@ def lspparams(r, z, s):
 			K[i, j] = z[i]**j
 			K[i, r+j] = -s[i] * z[i]**j
 	if np.isnan(K).any() or not np.isfinite(K).all():
-		print(K)
+		logging.error("K is not finite or contains NaN")
+		logging.error(K)
 		raise ValueError()
 	y = jnp.array([z[i]**r * s[i] for i in range(M)], dtype=jnp.complex128)
 	if np.isnan(y).any() or not np.isfinite(y).all():
-		print(y)
+		logging.error("y is not finite or contains NaN")
 		raise ValueError()
 	pparams, residues, rank, sing = scipy.linalg.lstsq(K, y)
 	condition = np.max(sing) / np.min(sing)
-	if True or condition > 1e10:
-		print("these are the singular values:\n", sing)
-		print(f"Condition number of K before preconditioning: {condition}")
-	# Pinv = jacobi_preconditioner(K)
-	# K = np.dot(Pinv, K)
-	# y =	np.dot(Pinv, y)
-	# pparams, residues, rank, sing = scipy.linalg.lstsq(K, y)
-	# condition = np.max(sing) / np.min(sing)
-	# if True or condition > 1e10:
-	# 	print("these are the singular values:\n", sing)
-	# 	print(f"Condition number of K after preconditioning: {condition}")
+	if condition > 1e10:
+		logging.warn(f"Condition number of K (without preconditioning) is very high: {condition}")
+		logging.warn("these are the singular values:\n", sing)
+	if precondition:
+		logging.warn("Jacobi preconditioning is enabled. This is dangerous as in test cases it increased the condition number. This kind of matrix is not a good target for Jacobi preconditioning.")
+		Pinv = jacobi_preconditioner(K)
+		K = np.dot(Pinv, K)
+		y =	np.dot(Pinv, y)
+		pparams, residues, rank, sing = scipy.linalg.lstsq(K, y)
+		condition = np.max(sing) / np.min(sing)
+		if condition > 1e10:
+			logging.warn(f"Condition number of K (after preconditioning) is very high: {condition}")
+			logging.warn("these are the singular values:\n", sing)
+	if precise:
+		logging.debug("Precise solution with GPU-accelerated minimization.")
+		loss = jax.jit(pade_model_loss(z, s))
+		gf = jax.grad(loss)
+		x0 = complex_to_real(pparams)
+		logging.debug(f"loss: {loss(x0)}")
+		
+		res = scipy.optimize.minimize(fun=loss, x0=x0, jac=gf,
+						method="CG",
+						callback=LossInfo(loss, gf, 10),
+						options={"disp": True})
+		if not res.success:
+			logging.info(f"optimization failed, reason: {res.message}")
+		pparams = real_to_complex(res.x)
 
-	loss = jax.jit(pade_model_loss(z, s)) #pade_real_loss_jax(K, y)
-	gf = jax.grad(loss)
-	x0 = complex_to_real(pparams)
-	print(f"loss: {loss(x0)}")
-	# res = scipy.optimize.minimize(fun=loss, x0=x0, jac=gf,
-	# 				method="CG",
-	# 				callback=LossInfo(loss, gf, 10),
-	# 				options={"gtol": 1e-35, "disp": True})
-	# if not res.success:
-	# 	print(f"optimization failed, reason: {res.message}")
-	# pparams = real_to_complex(res.x)
-
-	loss = np.sum(all_res := np.abs(y - np.dot(K, pparams))**2)
-	if True or loss > 1:
-		print(f"loss: {loss}")
-		print("these are the residues:\n", all_res)
-		# raise ValueError()
-
+	if loss_val := pade_model_loss(z, s)(pparams) > 1:
+		logging.warning(f"loss: {loss_val}")
+		all_res = np.abs(y - np.dot(K, pparams))**2
+		logging.warning("these are the residues:\n", all_res)
 	return pparams
 
 class PadeModel():
@@ -170,7 +175,7 @@ class AverageModel(PadeModel):
 		res /= np.sum(self.weights)
 		return res
 
-def model_pade(z, s, M=range(50, 99, 4), N=range(50, 99, 4), n0=[1], plot=True):
+def model_pade(z, s, M=range(50, 99, 4), N=range(50, 99, 4), n0=[1], plot=True, **kwargs):
 	z, s, M, N = np.array(z), np.array(s), np.array(M), np.array(N)
 	models = []
 	for m in M:
@@ -183,7 +188,7 @@ def model_pade(z, s, M=range(50, 99, 4), N=range(50, 99, 4), n0=[1], plot=True):
 				continue
 			samples_i = np.linspace(len(z)*0., 0.25*len(z)-1, num=m, dtype=np.int)
 			r = n // 2
-			pparams = lspparams(r, z[samples_i], s[samples_i])
+			pparams = lspparams(r, z[samples_i], s[samples_i], **kwargs)
 			models.append(model := PadeModel(pparams))
 			if plot:
 				# plot real and imaginary parts
