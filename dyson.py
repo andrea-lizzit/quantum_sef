@@ -55,7 +55,14 @@ if __name__ == "__main__":
 	import matplotlib.pyplot as plt
 	from jax.config import config
 	config.update("jax_enable_x64", True)
-	logging.basicConfig(filename='quantum-sef.log', level=logging.INFO)
+
+	logger = logging.getLogger(__name__)
+	logger.setLevel(logging.INFO)
+	fh = logging.FileHandler("quantum-sef.log")
+	fh.setLevel(logging.INFO)
+	formatter = logging.Formatter('%(name)s %(levelname)s %(message)s')
+	fh.setFormatter(formatter)
+	logger.addHandler(fh)
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--orbital", type=int)
@@ -68,6 +75,7 @@ if __name__ == "__main__":
 	p_multipole.add_argument("n_poles", type=int)
 	p_pade = subparsers.add_parser("pade")
 	p_pade.add_argument("prefix")
+	p_pade.add_argument("--type", choices=["avgLS", "avgsimilar"])
 	p_a = subparsers.add_parser("gwwfit")
 	p_a.add_argument("self_energy", help="prefix and suffix of name of the file containing the self-energy values")
 	p_a.add_argument("gww_out", help="filename of the gww output")
@@ -98,9 +106,7 @@ if __name__ == "__main__":
 			filename_imag = args.prefix + "-im_on_im0000" + str(orbital)
 			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
 			z, s = qe_data["z"], qe_data["s"]
-			# i = np.argwhere(np.imag(z) > 10)[0, 0]
-			# z, s = z[:i], s[:i]
-			return fit.fit("pade", z, s, M=[16], N=[8])
+			return fit.fit("pade", z, s, precise_iter=0, M=range(8, 80, 8), N=[8, 80, 8], modeltype=args.type)
 	# orbitals = load_gww_energies(args.gww_out).keys()
 	for i in orbitals:
 		E[i]["GWC"] = GW(E[i], get_model(i))
