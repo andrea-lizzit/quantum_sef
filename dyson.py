@@ -114,7 +114,7 @@ if __name__ == "__main__":
 	for i in orbitals:
 		print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}\tstarting: {np.real(E[i]['HF-pert']):.7}\tcorrect: {np.real(E[i]['GW']):.7}")
 
-	if args.self_energy:
+	if False and args.self_energy:
 		prefix, suffix = args.self_energy.split(",")
 		filename_real, filename_imag = prefix + "-re_on_im" + suffix, prefix + "-im_on_im" + suffix
 		orbital_i = int(suffix)

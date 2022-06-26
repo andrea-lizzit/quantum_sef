@@ -169,6 +169,24 @@ class PadeModel():
 			if self.rho(wi) < tol:
 				return False
 		return True
+	def plot_base(self, ax, z, s):
+		ax[0].plot(np.imag(z), np.real(self(z)), label=f"se", color="#c33")
+		ax[0].plot(np.imag(z), np.imag(self(z)), label=f"se", color="#933")
+		ax[0].legend()
+		ax[0].plot(np.imag(z), np.real(s), label=f"se", color="#3c3")
+		ax[0].plot(np.imag(z), np.imag(s), label=f"se", color="#393")
+		ax[0].legend()
+		# get indexes where model is smaller than 1e4
+		# plot like above but only points smaller than 1e4. Evaluate model, get indices, plot
+		y = self(-z*1j)
+		idx = np.where(np.abs(y) < 1e4)
+		ax[1].plot(np.imag(z[idx]), np.real(y[idx]), label=f"se", color="#c33", ms=2)
+		ax[1].plot(np.imag(z[idx]), np.imag(y[idx]), label=f"se", color="#393", ms=2)
+		ax[1].plot(np.imag(z[idx]), self.rho(np.imag(z[idx])), label=f"se", color="#3c3", ms=2)
+		ax[1].legend()
+	def plot(self, ax, z, s):
+		self.plot_base(ax, z, s)
+
 		
 class AverageModel(PadeModel):
 	def __init__(self, models, weights):
@@ -210,7 +228,7 @@ class AverageSimilarModel(AverageModel):
 			deviation += np.sum(np.abs(model.rho(self.w) - self.models[i].rho(self.w)))
 		return deviation
 
-def model_pade(z, s, M=range(50, 99, 4), N=range(50, 99, 4), n0=[1], plot=False, precise_iter=0, modeltype='avgLS', **kwargs):
+def model_pade(z, s, M=range(50, 99, 4), N=range(50, 99, 4), n0=[1], plot=True, precise_iter=0, modeltype='avgLS', **kwargs):
 	z, s, M, N = np.array(z), np.array(s), np.array(M), np.array(N)
 	models = []
 	for m in M:
@@ -227,7 +245,7 @@ def model_pade(z, s, M=range(50, 99, 4), N=range(50, 99, 4), n0=[1], plot=False,
 			if precise_iter:
 				pparams = optimize_pparams(pparams, z, s, precise_iter)
 			models.append(model := PadeModel(pparams))
-			if plot:
+			if plot and False:
 				fig, ax = plt.subplots(1, 2, figsize=(10, 5))
 				ax[0].plot(np.imag(z), np.real(model(z)), label=f"m={m}, n={n}", color="#c33")
 				ax[0].plot(np.imag(z), np.imag(model(z)), label=f"m={m}, n={n}", color="#933")
@@ -247,12 +265,23 @@ def model_pade(z, s, M=range(50, 99, 4), N=range(50, 99, 4), n0=[1], plot=False,
 				ax[1].plot(np.imag(z[idx]), model.rho(np.imag(z[idx])), label=f"m={m}, n={n}", color="#3c3", ms=2)
 				ax[1].legend()
 				plt.show()
+			if plot and False:
+				fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+				# # plot points of s corresponding to samples_i with red circles
+				ax[0].plot(np.imag(z[samples_i]), np.real(s[samples_i]), "ro", label=f"m={m}, n={n}", ms=2)
+				ax[0].plot(np.imag(z[samples_i]), np.imag(s[samples_i]), "ro", label=f"m={m}, n={n}", ms=2)
+				model.plot(ax, z, s)
+				plt.show()
 	# average diagonal
 	w = np.imag(z)
 	weights = [1 if model.physical(w) else 0.001 for model in models]
 	print(f"there are {np.sum([model.physical(w) for model in models])} models with physical properties")
 	if modeltype == 'avgLS':
-		return AverageLSModel(models, w)
+		avgdiagmodel = AverageLSModel(models, w)
 	else:
 		avgdiagmodel = AverageSimilarModel(models, w)
+	if plot:
+		fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+		avgdiagmodel.plot(ax, z, s)
+		plt.show()
 	return avgdiagmodel
