@@ -34,7 +34,7 @@ def dyson_s(E0, e0, correlation, precision=0.000001):
 		E = E0 + correlation(E)
 		if abs(prev_E - E) < precision * abs(E0):
 			pass
-		if abs(prev_E - E) > 10*abs(E0):
+		if abs(E) > 10*abs(E0):
 			raise RuntimeError("self-consistent calculation diverges")
 	return E
 
@@ -52,6 +52,9 @@ def GW(qe_E, correlation):
 if __name__ == "__main__":
 	import csv, argparse, yaml
 	import matplotlib.pyplot as plt
+	from jax.config import config
+	config.update("jax_enable_x64", True)
+
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--orbital", type=int)
 	subparsers = parser.add_subparsers(dest="subparser")
@@ -61,6 +64,8 @@ if __name__ == "__main__":
 	p_multipole = subparsers.add_parser("multipole")
 	p_multipole.add_argument("prefix")
 	p_multipole.add_argument("n_poles", type=int)
+	p_pade = subparsers.add_parser("pade")
+	p_pade.add_argument("prefix")
 	p_a = subparsers.add_parser("gwwfit")
 	p_a.add_argument("self_energy", help="prefix and suffix of name of the file containing the self-energy values")
 	p_a.add_argument("gww_out", help="filename of the gww output")
@@ -85,6 +90,15 @@ if __name__ == "__main__":
 			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
 			z, s = qe_data["z"], qe_data["s"]
 			return fit.fit("multipole", z, s, args.n_poles)
+	if args.subparser == "pade":
+		def get_model(orbital):
+			filename_real = args.prefix + "-re_on_im0000" + str(orbital)
+			filename_imag = args.prefix + "-im_on_im0000" + str(orbital)
+			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
+			z, s = qe_data["z"], qe_data["s"]
+			# i = np.argwhere(np.imag(z) > 10)[0, 0]
+			# z, s = z[:i], s[:i]
+			return fit.fit("pade", z, s, M=[16], N=[8])
 	# orbitals = load_gww_energies(args.gww_out).keys()
 	for i in orbitals:
 		E[i]["GWC"] = GW(E[i], get_model(i))
