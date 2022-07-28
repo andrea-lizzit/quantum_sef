@@ -1,0 +1,2 @@
+./dyson.py multipole ../methane/ch4 4 ../methane/methane_qe2.txt
+./dyson.py pade --type avgsimilar ../methane/ch4 ../methane/methane_qe2.txt
