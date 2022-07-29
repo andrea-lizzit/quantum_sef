@@ -1,7 +1,7 @@
 import numpy as np
 import csv, re
 from multipole.common import *
-
+from pathlib import Path
 
 def load_gww_fit(filename):
 	""" Returns a list of MPParams from qe calculations, one for each orbital """
@@ -73,3 +73,29 @@ def load_qe_se(file_real, file_im, n_fit=None, positive=False):
 	qefitr = list(map(complex, rqefitr, iqefitr))
 	z = list(map(lambda i: complex(0, i), freq))
 	return {"z": z, "s": se, "fit_imag": qefitim, "fit_real": qefitr}
+
+
+class QEDir():
+	""" Wrapper for quantum espresso data stored in files in a directory
+		It is assumed that the directory contains only files related to one compound """
+	def __init__(self, dir):
+		self.dir = Path(dir)
+		# save the names of the files in the directory
+		files = self.dir.iterdir()
+		names = map(lambda x: re.match('(\w+-)(?:re|im)_on_im(\d{5})', x.name), files)
+		names = list(filter(None, names))
+		self.orbitals = set(map(lambda x: int(x.group(2)), names))
+		self.prefix = names[0].group(1)
+		self.gww_file = next(self.dir.glob("*_gww.out"))
+	
+	def get_se(self, orbital, positive=True):
+		""" Returns the self energy for the given orbital """
+		if orbital not in self.orbitals:
+			raise ValueError(f"Orbital {orbital} not found")
+		file_real = self.dir / f"{self.prefix}re_on_im{orbital:05d}"
+		file_im = self.dir / f"{self.prefix}im_on_im{orbital:05d}"
+		return load_qe_se(file_real, file_im, positive=positive)
+	
+	def get_energies(self):
+		""" Returns the energies computed by quantum espresso """
+		return load_gww_energies(self.gww_file)

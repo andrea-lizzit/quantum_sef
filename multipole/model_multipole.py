@@ -60,7 +60,7 @@ def fit_mpparams(z, s, n_poles):
 		y = vmodel(z)
 		return complex_chi2(y, s)
 
-	gf = jax.grad(loss)
+	gf = jax.jit(jax.grad(loss))
 	# print(f"chi iniziale {loss(x0)} \ngrad iniziale {gf(x0)}")
 	res = scipy.optimize.minimize(fun=loss, x0=x0, jac=gf, method="BFGS")
 	# print(f"chi finale {loss(res.x)} \ngrad finale {gf(res.x)}")

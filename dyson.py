@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
-from qe_utils import load_gww_energies, load_gww_fit, load_qe_se
+from qe_utils import QEDir, load_gww_energies, load_gww_fit, load_qe_se
 import fit
 import logging
 from pade.model_pade import AverageModel, AverageSimilarModel, AverageLSModel
@@ -68,26 +68,24 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--orbital", type=int)
 	subparsers = parser.add_subparsers(dest="subparser")
-	parser.add_argument("gww_out", help="filename of the gww output")
+	parser.add_argument("dir", help="directory containing the quantum espresso files")
 	p_loadparams = subparsers.add_parser("gwwparams")
 	p_loadparams.add_argument("--self_energy", "-s", help="qe self-energy file for comparison")
 	p_multipole = subparsers.add_parser("multipole")
-	p_multipole.add_argument("prefix")
 	p_multipole.add_argument("n_poles", type=int)
 	p_pade = subparsers.add_parser("pade")
-	p_pade.add_argument("prefix")
 	p_pade.add_argument("--type", choices=["avgLS", "avgsimilar"])
 	p_a = subparsers.add_parser("gwwfit")
 	p_a.add_argument("self_energy", help="prefix and suffix of name of the file containing the self-energy values")
-	p_a.add_argument("gww_out", help="filename of the gww output")
 	p_a.add_argument("--qe", action="store_true", help="use qe self-energy")
 	args = parser.parse_args()
 	
-	E = load_gww_energies(args.gww_out)
+	qedir = QEDir(args.dir)
+	E = qedir.get_energies()
 	if args.orbital:
 		orbitals = [args.orbital]
 	else:
-		orbitals = [1, 2, 3, 4, 5]
+		orbitals = qedir.orbitals
 
 	offset = (E[5]["DFT"] + 0) / (2 * RY)
 	print(f'offset {offset} = {E[5]["DFT"]} + {0} / 2RY')
@@ -96,16 +94,12 @@ if __name__ == "__main__":
 		get_model = lambda orbital: fit.fit("qe", args.gww_out, orbital)
 	if args.subparser == "multipole":
 		def get_model(orbital):
-			filename_real = args.prefix + "-re_on_im0000" + str(orbital)
-			filename_imag = args.prefix + "-im_on_im0000" + str(orbital)
-			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
+			qe_data = qedir.get_se(orbital)
 			z, s = qe_data["z"], qe_data["s"]
 			return fit.fit("multipole", z, s, args.n_poles)
 	if args.subparser == "pade":
 		def get_model(orbital):
-			filename_real = args.prefix + "-re_on_im0000" + str(orbital)
-			filename_imag = args.prefix + "-im_on_im0000" + str(orbital)
-			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
+			qe_data = qedir.get_se(orbital)
 			z, s = qe_data["z"], qe_data["s"]
 			M, N = range(8, 80, 8), [8, 16, 74, 76, 78, 80]
 			z, s, M, N = np.array(z), np.array(s), np.array(M), np.array(N)
