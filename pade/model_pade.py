@@ -1,9 +1,6 @@
-from ast import Param
 import logging
 from numbers import Complex, Real
-from xml.etree.ElementTree import QName
 import numpy as np
-import matplotlib.pyplot as plt
 from pade.minimization import lspparams, optimize_pparams
 
 logger = logging.getLogger(__name__)
@@ -17,6 +14,7 @@ class PadeModel:
             raise ValueError()
 
     def approx_num_den(self, z: Complex) -> Complex:
+        """ Calculate the numerator and denominator of the Pade approximant """
         a = self.pparams[0 : len(self.pparams) // 2]
         b = self.pparams[len(self.pparams) // 2 :]
         r = len(a)
@@ -153,105 +151,3 @@ class AverageSimilarModel(AutoWeightedModel):
                 continue
             deviation += np.sum(np.abs(model.rho(w) - self.models[i].rho(w)))
         return deviation
-
-
-def model_pade(
-    z,
-    s,
-    M=range(50, 99, 4),
-    N=range(50, 99, 4),
-    n0=[1],
-    plot=True,
-    precise_iter=0,
-    modeltype="avgLS",
-    **kwargs,
-):
-    z, s, M, N = np.array(z), np.array(s), np.array(M), np.array(N)
-    models = AverageModel.get_models(z, s, M, N, precise_iter)
-    if plot and False:
-        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-        ax[0].plot(
-            np.imag(z), np.real(model(z)), label=f"m={m}, n={n}", color="#c33"
-        )
-        ax[0].plot(
-            np.imag(z), np.imag(model(z)), label=f"m={m}, n={n}", color="#933"
-        )
-        ax[0].legend()
-        ax[0].plot(np.imag(z), np.real(s), label=f"m={m}, n={n}", color="#3c3")
-        ax[0].plot(np.imag(z), np.imag(s), label=f"m={m}, n={n}", color="#393")
-        # # plot points of s corresponding to samples_i with red circles
-        ax[0].plot(
-            np.imag(z[samples_i]),
-            np.real(s[samples_i]),
-            "ro",
-            label=f"m={m}, n={n}",
-            ms=2,
-        )
-        ax[0].plot(
-            np.imag(z[samples_i]),
-            np.imag(s[samples_i]),
-            "ro",
-            label=f"m={m}, n={n}",
-            ms=2,
-        )
-        ax[0].legend()
-        # get indexes where model is smaller than 1e4
-        # plot like above but only points smaller than 1e4. Evaluate model, get indices, plot
-        y = model(-z * 1j)
-        idx = np.where(np.abs(y) < 1e4)
-        ax[1].plot(
-            np.imag(z[idx]),
-            np.real(y[idx]),
-            label=f"m={m}, n={n}",
-            color="#c33",
-            ms=2,
-        )
-        ax[1].plot(
-            np.imag(z[idx]),
-            np.imag(y[idx]),
-            label=f"m={m}, n={n}",
-            color="#393",
-            ms=2,
-        )
-        ax[1].plot(
-            np.imag(z[idx]),
-            model.rho(np.imag(z[idx])),
-            label=f"m={m}, n={n}",
-            color="#3c3",
-            ms=2,
-        )
-        ax[1].legend()
-        plt.show()
-    if plot and False:
-                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                # # plot points of s corresponding to samples_i with red circles
-                ax[0].plot(
-                    np.imag(z[samples_i]),
-                    np.real(s[samples_i]),
-                    "ro",
-                    label=f"m={m}, n={n}",
-                    ms=2,
-                )
-                ax[0].plot(
-                    np.imag(z[samples_i]),
-                    np.imag(s[samples_i]),
-                    "ro",
-                    label=f"m={m}, n={n}",
-                    ms=2,
-                )
-                model.plot(ax, z, s)
-                plt.show()
-    # average diagonal
-    w = np.imag(z)
-    print(
-        f"there are {np.sum([model.physical(w) for model in models])} models with physical properties"
-    )
-    if modeltype == "avgLS":
-        avgdiagmodel = AverageLSModel(models, w)
-    else:
-        avgdiagmodel = AverageSimilarModel(models, w)
-    if plot:
-        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-        avgdiagmodel.plot(ax, z, s)
-        plt.show()
-    return avgdiagmodel

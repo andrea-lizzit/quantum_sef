@@ -4,7 +4,7 @@ import numpy as np
 from qe_utils import load_gww_energies, load_gww_fit, load_qe_se
 import fit
 import logging
-from pade.model_pade import PadeModel
+from pade.model_pade import AverageModel, AverageSimilarModel, AverageLSModel
 
 RY = 13.605693122994
 
@@ -107,8 +107,23 @@ if __name__ == "__main__":
 			filename_imag = args.prefix + "-im_on_im0000" + str(orbital)
 			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
 			z, s = qe_data["z"], qe_data["s"]
-			#return PadeModel.from_specs(z, s, 8, 8)
-			return fit.fit("pade", z, s, precise_iter=0, M=range(8, 80, 8), N=[8, 80, 8], modeltype=args.type)
+			M, N = range(8, 80, 8), [8, 16, 74, 76, 78, 80]
+			z, s, M, N = np.array(z), np.array(s), np.array(M), np.array(N)
+			models = AverageModel.get_models(z, s, M, N, precise_iter=0)
+			w = np.imag(z)
+			print(
+				f"there are {np.sum([model.physical(w) for model in models])} models with physical properties"
+			)
+			if args.type == "avgLS":
+				avgdiagmodel = AverageLSModel(models, w)
+			else:
+				avgdiagmodel = AverageSimilarModel(models, w)
+			if True:
+				fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+				avgdiagmodel.plot(ax, z, s)
+				plt.show()
+			return avgdiagmodel
+			
 	# orbitals = load_gww_energies(args.gww_out).keys()
 	for i in orbitals:
 		E[i]["GWC"] = GW(E[i], get_model(i))

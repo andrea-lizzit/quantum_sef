@@ -7,15 +7,12 @@ from dyson import dyson
 from qe_utils import load_qe_se
 from multipole.model_multipole import model_multipole
 from multipole.model_qe import model_qe
-from pade.model_pade import model_pade
 
 def fit(method, *args, **kwargs):
 	if method == "qe":
 		return model_qe(*args, **kwargs)
 	if method == "multipole":
 		return model_multipole(*args, **kwargs)
-	if method == "pade":
-		return model_pade(*args, **kwargs)
 	return None
 
 if __name__ == "__main__":
