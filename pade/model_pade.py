@@ -1,6 +1,7 @@
 from ast import Param
 import logging
 from numbers import Complex, Real
+from xml.etree.ElementTree import QName
 import numpy as np
 import matplotlib.pyplot as plt
 from pade.minimization import lspparams, optimize_pparams
@@ -88,36 +89,69 @@ class AverageModel(PadeModel):
         res /= np.sum(self.weights)
         return res
 
+    @staticmethod
+    def get_models(z, s, M, N, precise_iter=0):
+        z, s, M, N = np.array(z), np.array(s), np.array(M), np.array(N)
 
-class AverageLSModel(AverageModel):
-    def __init__(self, models, w):
+        models = []
+        for m in M:
+            if m % 2:
+                pass  # raise ValueError()
+            for n in N:
+                if n % 2:
+                    raise ValueError()
+                if n > m:
+                    continue
+                model = PadeModel.from_specs(z, s, m, n)
+                if precise_iter:
+                    pparams = optimize_pparams(model.pparams, z, s, precise_iter)
+                    model = PadeModel(pparams)
+                models.append(model)
+        return models
+
+        
+class AutoWeightedModel(AverageModel):
+    def __init__(self, models, w, get_weights=None):
         self.models = models
-        self.weights = [model.physical(w) for model in models]
+        if get_weights:
+            self.get_weights=get_weights
+        self.weights = self.get_weights(w)
+    
+    def get_weights(self, w):
+        return NotImplementedError()
+
+    @classmethod
+    def from_specs(cls, z, s, M, N, w=None, precise_iter=0):
+        """ Create an AverageLSModel on a list of models fitted on z and s with the specified ranges of M and N """
+
+        if w is None:
+            # make the assumption that w is the same as z rotated the real axis, as in qe
+            w = np.imag(z)
+
+        models = cls.get_models(z, s, M, N, precise_iter)
+        return cls(models, w)
 
 
-class AverageSimilarModel(AverageModel):
-    def __init__(self, models, w):
-        self.models = models
-        self.w = w
-        self.weights = [self.Dc(i) for i in range(len(self.models))]
-        if not any(self.weights):
+class AverageLSModel(AutoWeightedModel):
+    def get_weights(self, w):
+        return [model.physical(w) for model in self.models]
+                
+
+class AverageSimilarModel(AutoWeightedModel):
+    def get_weights(self, w):
+        weights = [self.Dc(i, w) for i in range(len(self.models))]
+        if not any(weights):
             raise RuntimeError("No physical solutions")
+        return weights
 
-    def __call__(self, z: Complex) -> Complex:
-        res = 0
-        for model, weight in zip(self.models, self.weights):
-            res += model(z) * weight
-        res /= np.sum(self.weights)
-        return res
-
-    def Dc(self, i):
+    def Dc(self, i, w):
         deviation = 0
         for j, model in enumerate(self.models):
             if j == i:
                 continue
-            if not model.physical(self.w):
+            if not model.physical(w):
                 continue
-            deviation += np.sum(np.abs(model.rho(self.w) - self.models[i].rho(self.w)))
+            deviation += np.sum(np.abs(model.rho(w) - self.models[i].rho(w)))
         return deviation
 
 
@@ -133,75 +167,62 @@ def model_pade(
     **kwargs,
 ):
     z, s, M, N = np.array(z), np.array(s), np.array(M), np.array(N)
-    models = []
-    for m in M:
-        if m % 2:
-            pass  # raise ValueError()
-        for n in N:
-            if n % 2:
-                raise ValueError()
-            if n > m:
-                continue
-            model = PadeModel.from_specs(z, s, m, n)
-            if precise_iter:
-                pparams = optimize_pparams(model.pparams, z, s, precise_iter)
-                model = PadeModel(pparams)
-            models.append(model)
-            if plot and False:
-                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                ax[0].plot(
-                    np.imag(z), np.real(model(z)), label=f"m={m}, n={n}", color="#c33"
-                )
-                ax[0].plot(
-                    np.imag(z), np.imag(model(z)), label=f"m={m}, n={n}", color="#933"
-                )
-                ax[0].legend()
-                ax[0].plot(np.imag(z), np.real(s), label=f"m={m}, n={n}", color="#3c3")
-                ax[0].plot(np.imag(z), np.imag(s), label=f"m={m}, n={n}", color="#393")
-                # # plot points of s corresponding to samples_i with red circles
-                ax[0].plot(
-                    np.imag(z[samples_i]),
-                    np.real(s[samples_i]),
-                    "ro",
-                    label=f"m={m}, n={n}",
-                    ms=2,
-                )
-                ax[0].plot(
-                    np.imag(z[samples_i]),
-                    np.imag(s[samples_i]),
-                    "ro",
-                    label=f"m={m}, n={n}",
-                    ms=2,
-                )
-                ax[0].legend()
-                # get indexes where model is smaller than 1e4
-                # plot like above but only points smaller than 1e4. Evaluate model, get indices, plot
-                y = model(-z * 1j)
-                idx = np.where(np.abs(y) < 1e4)
-                ax[1].plot(
-                    np.imag(z[idx]),
-                    np.real(y[idx]),
-                    label=f"m={m}, n={n}",
-                    color="#c33",
-                    ms=2,
-                )
-                ax[1].plot(
-                    np.imag(z[idx]),
-                    np.imag(y[idx]),
-                    label=f"m={m}, n={n}",
-                    color="#393",
-                    ms=2,
-                )
-                ax[1].plot(
-                    np.imag(z[idx]),
-                    model.rho(np.imag(z[idx])),
-                    label=f"m={m}, n={n}",
-                    color="#3c3",
-                    ms=2,
-                )
-                ax[1].legend()
-                plt.show()
-            if plot and False:
+    models = AverageModel.get_models(z, s, M, N, precise_iter)
+    if plot and False:
+        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        ax[0].plot(
+            np.imag(z), np.real(model(z)), label=f"m={m}, n={n}", color="#c33"
+        )
+        ax[0].plot(
+            np.imag(z), np.imag(model(z)), label=f"m={m}, n={n}", color="#933"
+        )
+        ax[0].legend()
+        ax[0].plot(np.imag(z), np.real(s), label=f"m={m}, n={n}", color="#3c3")
+        ax[0].plot(np.imag(z), np.imag(s), label=f"m={m}, n={n}", color="#393")
+        # # plot points of s corresponding to samples_i with red circles
+        ax[0].plot(
+            np.imag(z[samples_i]),
+            np.real(s[samples_i]),
+            "ro",
+            label=f"m={m}, n={n}",
+            ms=2,
+        )
+        ax[0].plot(
+            np.imag(z[samples_i]),
+            np.imag(s[samples_i]),
+            "ro",
+            label=f"m={m}, n={n}",
+            ms=2,
+        )
+        ax[0].legend()
+        # get indexes where model is smaller than 1e4
+        # plot like above but only points smaller than 1e4. Evaluate model, get indices, plot
+        y = model(-z * 1j)
+        idx = np.where(np.abs(y) < 1e4)
+        ax[1].plot(
+            np.imag(z[idx]),
+            np.real(y[idx]),
+            label=f"m={m}, n={n}",
+            color="#c33",
+            ms=2,
+        )
+        ax[1].plot(
+            np.imag(z[idx]),
+            np.imag(y[idx]),
+            label=f"m={m}, n={n}",
+            color="#393",
+            ms=2,
+        )
+        ax[1].plot(
+            np.imag(z[idx]),
+            model.rho(np.imag(z[idx])),
+            label=f"m={m}, n={n}",
+            color="#3c3",
+            ms=2,
+        )
+        ax[1].legend()
+        plt.show()
+    if plot and False:
                 fig, ax = plt.subplots(1, 2, figsize=(10, 5))
                 # # plot points of s corresponding to samples_i with red circles
                 ax[0].plot(
@@ -222,7 +243,6 @@ def model_pade(
                 plt.show()
     # average diagonal
     w = np.imag(z)
-    weights = [1 if model.physical(w) else 0.001 for model in models]
     print(
         f"there are {np.sum([model.physical(w) for model in models])} models with physical properties"
     )
