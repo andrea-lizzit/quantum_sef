@@ -4,6 +4,7 @@ import numpy as np
 from qe_utils import load_gww_energies, load_gww_fit, load_qe_se
 import fit
 import logging
+from pade.model_pade import PadeModel
 
 RY = 13.605693122994
 
@@ -106,6 +107,7 @@ if __name__ == "__main__":
 			filename_imag = args.prefix + "-im_on_im0000" + str(orbital)
 			qe_data = load_qe_se(filename_real, filename_imag, positive=True)
 			z, s = qe_data["z"], qe_data["s"]
+			#return PadeModel.from_specs(z, s, 8, 8)
 			return fit.fit("pade", z, s, precise_iter=0, M=range(8, 80, 8), N=[8, 80, 8], modeltype=args.type)
 	# orbitals = load_gww_energies(args.gww_out).keys()
 	for i in orbitals:
