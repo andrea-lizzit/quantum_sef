@@ -2,3 +2,5 @@ methane/
 .vscode/
 __pycache__/
 quantum-sef.log
+sensitivity/res
+images/

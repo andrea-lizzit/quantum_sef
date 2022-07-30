@@ -1,2 +1,8 @@
 ./dyson.py multipole ../methane/ch4 4 ../methane/methane_qe2.txt
 ./dyson.py pade --type avgsimilar ../methane/ch4 ../methane/methane_qe2.txt
+
+./dyson.py multipole 4 ../methane
+./dyson.py pade avgsimilar ../methane
+
+# dalla directory quantum_sef
+python -m sensitivity.sensitivity_pade

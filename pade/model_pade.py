@@ -46,22 +46,27 @@ class PadeModel:
         return True
 
     def plot_base(self, ax, z, s):
-        ax[0].plot(np.imag(z), np.real(self(z)), label=f"se", color="#c33")
-        ax[0].plot(np.imag(z), np.imag(self(z)), label=f"se", color="#933")
+        ax[0].plot(np.imag(z), np.real(self(z)), label=f"fit (real)", color="#c33", linestyle="--")
+        ax[0].plot(np.imag(z), np.imag(self(z)), label=f"fit (imag)", color="#933", linestyle='--')
+        ax[0].plot(np.imag(z), np.real(s), label=f"target (real)", color="#3c3", linestyle="dotted")
+        ax[0].plot(np.imag(z), np.imag(s), label=f"target (imag)", color="#393", linestyle="dotted")
         ax[0].legend()
-        ax[0].plot(np.imag(z), np.real(s), label=f"se", color="#3c3")
-        ax[0].plot(np.imag(z), np.imag(s), label=f"se", color="#393")
-        ax[0].legend()
+        ax[0].set_title("self-energy on the imaginary axis")
+        ax[0].set_xlabel("Imag(z) (Ry)")
+        ax[0].set_ylabel("self-energy")
         # get indexes where model is smaller than 1e4
         # plot like above but only points smaller than 1e4. Evaluate model, get indices, plot
         y = self(-z * 1j)
         idx = np.where(np.abs(y) < 1e4)
-        ax[1].plot(np.imag(z[idx]), np.real(y[idx]), label=f"se", color="#c33", ms=2)
-        ax[1].plot(np.imag(z[idx]), np.imag(y[idx]), label=f"se", color="#393", ms=2)
+        ax[1].plot(np.imag(z[idx]), np.real(y[idx]), label=f"fit (real)", color="#c33", ms=2)
+        ax[1].plot(np.imag(z[idx]), np.imag(y[idx]), label=f"fit (imag)", color="#393", ms=2)
         ax[1].plot(
-            np.imag(z[idx]), self.rho(np.imag(z[idx])), label=f"se", color="#3c3", ms=2
+            np.imag(z[idx]), self.rho(np.imag(z[idx])), label=f"fit (rho)", color="#3c3", ms=2
         )
         ax[1].legend()
+        ax[1].set_title("self-energy on the real axis")
+        ax[1].set_xlabel("x (Ry)")
+        ax[1].set_ylabel("self-energy")
 
     def plot(self, ax, z, s):
         self.plot_base(ax, z, s)

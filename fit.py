@@ -3,7 +3,6 @@
 import numpy as np
 import jax
 import jax.numpy as jnp
-from dyson import dyson
 from qe_utils import load_qe_se
 from multipole.model_multipole import model_multipole
 from multipole.model_qe import model_qe
@@ -16,7 +15,7 @@ def fit(method, *args, **kwargs):
 	return None
 
 if __name__ == "__main__":
-	import csv, argparse, yaml
+	import argparse
 	import matplotlib.pyplot as plt
 	parser = argparse.ArgumentParser()
 	parser.add_argument("file_real")

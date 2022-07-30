@@ -1,19 +1,12 @@
 #!/usr/bin/env python
 
 import numpy as np
-from qe_utils import QEDir, load_gww_energies, load_gww_fit, load_qe_se
+from qe_utils import QEDir, load_qe_se
 import fit
 import logging
 from pade.model_pade import AverageModel, AverageSimilarModel, AverageLSModel
 
 RY = 13.605693122994
-
-def multipole(z, params):
-	"""Multipole function to fit."""
-	v = params.bias
-	for pole in params.poles:
-		v += pole.a / (z - pole.b)
-	return v
 
 def dyson(E0, correlation, precision=0.000001):
 	E = E0
@@ -40,7 +33,7 @@ def dyson_s(E0, e0, correlation, precision=0.000001):
 			raise RuntimeError("self-consistent calculation diverges")
 	return E
 
-def GW(qe_E, correlation):
+def GW(qe_E, correlation, offset):
 	E0 = qe_E["DFT"]/RY - offset
 	E0 = complex(E0, 0)
 	E0 = qe_E["HF-pert"]/RY - offset + correlation(E0)
@@ -87,8 +80,7 @@ if __name__ == "__main__":
 	else:
 		orbitals = qedir.orbitals
 
-	offset = (E[5]["DFT"] + 0) / (2 * RY)
-	print(f'offset {offset} = {E[5]["DFT"]} + {0} / 2RY')
+	print(f'offset {qedir.offset} = {E[5]["DFT"]} + {0} / 2RY')
 
 	if args.subparser == "gwwparams":
 		get_model = lambda orbital: fit.fit("qe", args.gww_out, orbital)
@@ -120,7 +112,7 @@ if __name__ == "__main__":
 			
 	# orbitals = load_gww_energies(args.gww_out).keys()
 	for i in orbitals:
-		E[i]["GWC"] = GW(E[i], get_model(i))
+		E[i]["GWC"] = GW(E[i], get_model(i), qedir.offset)
 		# print(f"state {i}; GW energy: {E[i]['GWC']:.7}")
 	for i in orbitals:
 		print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}\tstarting: {np.real(E[i]['HF-pert']):.7}\tcorrect: {np.real(E[i]['GW']):.7}")

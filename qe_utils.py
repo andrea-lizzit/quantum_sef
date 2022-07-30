@@ -3,6 +3,8 @@ import csv, re
 from multipole.common import *
 from pathlib import Path
 
+RY = 13.605693122994
+
 def load_gww_fit(filename):
 	""" Returns a list of MPParams from qe calculations, one for each orbital """
 	with open(filename, "r") as fd:
@@ -99,3 +101,8 @@ class QEDir():
 	def get_energies(self):
 		""" Returns the energies computed by quantum espresso """
 		return load_gww_energies(self.gww_file)
+	
+	@property
+	def offset(self):
+		E = self.get_energies()
+		return (E[5]["DFT"] + 0) / (2 * RY)
