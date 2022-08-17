@@ -69,6 +69,7 @@ def fit_mpparams(z, s, n_poles):
 
 	if not res.success:
 		print(f"optimization failed, reason: {res.message}")
+		print("this is probably ok")
 	return make_mpparams(res.x), res.fun
 
 def model_multipole(z, s, n_poles):

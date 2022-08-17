@@ -115,7 +115,7 @@ if __name__ == "__main__":
 		E[i]["GWC"] = GW(E[i], get_model(i), qedir.offset)
 		# print(f"state {i}; GW energy: {E[i]['GWC']:.7}")
 	for i in orbitals:
-		print(f"state {i}; GW energy: {np.real(E[i]['GWC']):.7}\tstarting: {np.real(E[i]['HF-pert']):.7}\tcorrect: {np.real(E[i]['GW']):.7}")
+		print(f"state {i}; QSEF GW energy: {np.real(E[i]['GWC']):.7}\tstarting: {np.real(E[i]['HF-pert']):.7}\tQuantum Espresso: {np.real(E[i]['GW']):.7}")
 
 	if False and args.self_energy:
 		prefix, suffix = args.self_energy.split(",")
