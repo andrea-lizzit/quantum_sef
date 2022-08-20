@@ -11,20 +11,20 @@ device = torch.device("cpu") # torch.device("cuda:0" if torch.cuda.is_available(
 model = ConvCont().to(device)
 criterion = nn.MSELoss()
 
-testset = StorageSpectralDataset("train/1_test")
+testset = StorageSpectralDataset("train/2_test")
 testloader = torch.utils.data.DataLoader(testset, batch_size=1,
 											shuffle=True, num_workers=0)
 
 # load the model parameters from train/convcont$num.pt into model
 # use the last model in the list
 model_path = list(Path("train").glob("convcont*.pt"))[-1]
+print("Loading model from {}".format(model_path))
 model.load_state_dict(torch.load(str(model_path)))
 # evaluate the model on testset
 with torch.no_grad():
 	x, y = next(iter(testloader))
 	x = x.to(device)
 	y = y.to(device)
-	outputs = model(x)
 	plot_model(x, y, model)
 
 
