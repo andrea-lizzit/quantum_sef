@@ -24,13 +24,13 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 try:
 	testset = StorageSpectralDataset("train/1_test")
 except FileNotFoundError:
-	testset = SpectralDataset(1000)
+	testset = SpectralDataset(100)
 	testset.save("train/1_test/")
 
 try:
 	trainset = StorageSpectralDataset("train/1_train")
 except FileNotFoundError:
-	trainset = SpectralDataset(100)
+	trainset = SpectralDataset(1000)
 	trainset.save("train/1_train/")
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
@@ -48,6 +48,7 @@ for epoch in bar:
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
         x, y = data
+        x += torch.randn_like(x) * 0.01
 
         # zero the parameter gradients
         optimizer.zero_grad()
