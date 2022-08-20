@@ -109,7 +109,7 @@ def optimize_pparams(pparams, z, s, precise_iter=0):
 	res = scipy.optimize.minimize(fun=loss, x0=x0, jac=gf,
 					method="CG",
 					callback=LossInfo(loss, gf, 10),
-					options={"disp": True, "maxiter": precise_iter, "gtol": 1e-6})
+					options={"disp": True, "maxiter": precise_iter, "gtol": 1e-10})
 	if not res.success:
 		logger.info(f"optimization failed, reason: {res.message}")
 	pparams = real_to_complex(res.x)

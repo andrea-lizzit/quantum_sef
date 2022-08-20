@@ -60,13 +60,13 @@ class PadeModel:
         idx = np.where(np.abs(y) < 1e4)
         ax[1].plot(np.imag(z[idx]), np.real(y[idx]), label=f"fit (real)", color="#c33", ms=2)
         ax[1].plot(np.imag(z[idx]), np.imag(y[idx]), label=f"fit (imag)", color="#393", ms=2)
-        ax[1].plot(
-            np.imag(z[idx]), self.rho(np.imag(z[idx])), label=f"fit (rho)", color="#3c3", ms=2
-        )
+        #ax[1].plot(
+        #    np.imag(z[idx]), self.rho(np.imag(z[idx])), label=f"fit (rho)", color="#3c3", ms=2
+        #)
         ax[1].legend()
         ax[1].set_title("self-energy on the real axis")
         ax[1].set_xlabel("x (Ry)")
-        ax[1].set_ylabel("self-energy")
+        ax[1].set_ylabel("self-energy (Ry)")
 
     def plot(self, ax, z, s):
         self.plot_base(ax, z, s)

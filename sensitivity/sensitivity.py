@@ -57,7 +57,7 @@ def sensitivity(Model, params, z, fit_model, Ei, offset):
 	fig, ax = plt.subplots()
 	ax.hist(np.real(res))
 	ax.axvline(x=np.real(res_orig), color="g", label="original")
-	ax.set_xlabel("E (GW) (Ry)")
+	ax.set_xlabel("E (eV)")
 	ax.set_ylabel("counts")
 
 	return results(res, summary, fig)

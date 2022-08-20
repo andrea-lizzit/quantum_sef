@@ -19,7 +19,7 @@ class LossInfo():
 		self.interval = interval
 		self.jac = jac
 	def __call__(self, x):
-		""" Log value if it is different from last or an interbal has passed """
+		""" Log value if it is different from last or an interval has passed """
 		self.i += 1
 		value = self.loss(x)
 		if self.lastvalue is None or self.lastvalue != value and self.i%self.interval == 0:

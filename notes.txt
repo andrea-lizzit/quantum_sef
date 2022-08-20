@@ -12,3 +12,12 @@ state 2; GW energy: -12.85454   starting: -14.42306     correct: -12.90888
 state 3; GW energy: -12.92484   starting: -14.42306     correct: -13.03748
 state 4; GW energy: -12.97886   starting: -14.42306     correct: -12.90973
 state 5; GW energy: 0.338951    starting: 0.90053       correct: 0.3360679
+
+
+
+DEBUG:pade.minimization:Condition number of K (without preconditioning) is very high: 4977559.267688933
+DEBUG:pade.minimization:these are the singular values:
+[2.60412911e+04 4.18853442e+02 6.36068605e+01 6.33501393e+00
+ 1.88945691e+00 7.76810578e-01 9.68247932e-02 5.23173902e-03]
+INFO:pade.minimization:loss is high: 1986.0925317130689
+DEBUG:pade.minimization:Condition number of K (without preconditioning) is very high: 54027350148204.31

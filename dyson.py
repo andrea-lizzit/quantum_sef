@@ -68,6 +68,7 @@ if __name__ == "__main__":
 	p_multipole.add_argument("n_poles", type=int)
 	p_pade = subparsers.add_parser("pade")
 	p_pade.add_argument("--type", choices=["avgLS", "avgsimilar"])
+	p_pade.add_argument("--precise_iter", type=int, default=0)
 	p_a = subparsers.add_parser("gwwfit")
 	p_a.add_argument("self_energy", help="prefix and suffix of name of the file containing the self-energy values")
 	p_a.add_argument("--qe", action="store_true", help="use qe self-energy")
@@ -83,7 +84,7 @@ if __name__ == "__main__":
 	print(f'offset {qedir.offset} = {E[5]["DFT"]} + {0} / 2RY')
 
 	if args.subparser == "gwwparams":
-		get_model = lambda orbital: fit.fit("qe", args.gww_out, orbital)
+		get_model = lambda orbital: fit.fit("qe", qedir.gww_file, orbital)
 	if args.subparser == "multipole":
 		def get_model(orbital):
 			qe_data = qedir.get_se(orbital)
@@ -95,7 +96,7 @@ if __name__ == "__main__":
 			z, s = qe_data["z"], qe_data["s"]
 			M, N = range(8, 80, 8), [8, 16, 74, 76, 78, 80]
 			z, s, M, N = np.array(z), np.array(s), np.array(M), np.array(N)
-			models = AverageModel.get_models(z, s, M, N, precise_iter=0)
+			models = AverageModel.get_models(z, s, M, N, precise_iter=args.precise_iter)
 			w = np.imag(z)
 			print(
 				f"there are {np.sum([model.physical(w) for model in models])} models with physical properties"
