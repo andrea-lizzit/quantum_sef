@@ -1,15 +1,17 @@
 import numpy as np
-from sensitivity.sensitivity import sensitivity
-from qe_utils import QEDir
+import torch
 from pade.model_pade import PadeModel
+from neural.spectralgen import StorageSpectralDataset
+from neural.storagemanager import StorageManager
 import matplotlib.pyplot as plt
 from jax.config import config
 config.update("jax_enable_x64", True)
 
-qedir = QEDir("./sensitivity/res")
-orbital = qedir.orbitals.copy().pop()
-se = qedir.get_se(orbital)
-Ei = qedir.get_energies()[orbital-1]
+storage = StorageManager()
+z = np.linspace(0, 20, 241)
+testset = StorageSpectralDataset(storage.datasets()[-1].test)
+testloader = torch.utils.data.DataLoader(testset, batch_size=1,
+											shuffle=True, num_workers=0)
 
 # create a PadeModel on this data
 z, s = se["z"], se["s"]

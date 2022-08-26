@@ -53,7 +53,7 @@ class PadeModel:
         ax[0].legend()
         ax[0].set_title("self-energy on the imaginary axis")
         ax[0].set_xlabel("Imag(z) (Ry)")
-        ax[0].set_ylabel("self-energy")
+        ax[0].set_ylabel("self-energy (Ry)")
         # get indexes where model is smaller than 1e4
         # plot like above but only points smaller than 1e4. Evaluate model, get indices, plot
         y = self(-z * 1j)
