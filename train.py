@@ -1,31 +1,37 @@
-from datetime import datetime
-from pathlib import Path
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm, trange
-from spectralgen import SpectralDataset, StorageSpectralDataset
-from models import ConvCont
-from plotting import plot_model
+from datetime import datetime
+from pathlib import Path
+import argparse
+from tqdm import trange
+from neural.xydataset import XYDataset
+from neural.xydataset import generate as xygen
+from neural.models import ConvCont
+from neural.plotting import plot_model
+from neural.storagemanager import StorageManager
+
+storage = StorageManager()
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--load_model", action="store_true", help="load the last saved model")
+parser.add_argument("--version", type=int, default=1, help="version of the model")
+args = parser.parse_args()
 
 batch_size = 512
-load_model = True
 
 # load model and setup SummaryWriter
 date_signature = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 model = ConvCont()
 
 
-if load_model:
-    model_dir = list(Path("train").glob("v1_*"))[-1]
-    model_path = list(model_dir.glob("*.pt"))[-1]
+if args.load_model:
+    model_path = storage.last_model()
     print("Loading model from {}".format(model_path))
     model.load_state_dict(torch.load(str(model_path)))
 
-current_path = Path("train") / "v1_{}".format(date_signature)
 
 writer = SummaryWriter('runs')
 
@@ -42,16 +48,16 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 # load data
 try:
-	testset = StorageSpectralDataset("train/2_test")
+	testset = XYDataset.load(storage.datasets()[-1].test)
 except FileNotFoundError:
-	testset = SpectralDataset(100)
-	testset.save("train/2_test/")
+	testset = xygen.spectraldataset(100)
+	testset.save(storage.new_dataset() / "test")
 
 try:
-	trainset = StorageSpectralDataset("train/2_train")
+	trainset = XYDataset.load(storage.datasets()[-1].train)
 except FileNotFoundError:
-	trainset = SpectralDataset(1000)
-	trainset.save("train/2_train/")
+	trainset = xygen.spectraldataset(1000)
+	trainset.save(storage.new_dataset() / "train")
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
 											shuffle=True, num_workers=0)
@@ -59,7 +65,7 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
 testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
 											shuffle=True, num_workers=0)
 testiter = iter(testloader)
-print(f"lenght of testiter: {len(testiter)}")
+print(f"length of testiter: {len(testiter)}")
 
 # output model info
 summary(model, input_size=(batch_size, 2, 241))
@@ -111,12 +117,12 @@ for epoch in bar:
 
     # save model every 50 epochs
     if epoch % 50 == 0:
-        if not current_path.exists():
-            current_path.mkdir()
-        torch.save(model.state_dict(), str(current_path / "model_{}.pt".format(epoch)))
+        if not storage.new_session().exists():
+            storage.new_session().mkdir()
+        torch.save(model.state_dict(), str(storage.new_session() / "model_{}.pt".format(epoch)))
 
 
 # save final model
 print('Finished Training')
-torch.save(model.state_dict(), str(current_path / "model.pt"))
-print("Saved model to {}".format(str(current_path / "model.pt")))
+torch.save(model.state_dict(), str(storage.new_session() / "model.pt"))
+print("Saved model to {}".format(str(storage.new_session() / "model.pt")))
