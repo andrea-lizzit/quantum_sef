@@ -9,7 +9,7 @@ import argparse
 from tqdm import trange
 from neural.xydataset import XYDataset
 from neural.xydataset import generate as xygen
-from neural.models import ConvCont
+from neural.models import ConvCont, ConvSECont, ConvSEContX3L
 from neural.plotting import plot_model
 from neural.storagemanager import StorageManager
 
@@ -17,14 +17,14 @@ storage = StorageManager()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--load_model", action="store_true", help="load the last saved model")
-parser.add_argument("--version", type=int, default=1, help="version of the model")
+parser.add_argument("--version", type=int, default=4, help="version of the model")
 args = parser.parse_args()
 
-batch_size = 512
+batch_size = 32
 
 # load model and setup SummaryWriter
 date_signature = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-model = ConvCont()
+model = ConvSEContX3L()
 
 
 if args.load_model:
@@ -33,7 +33,7 @@ if args.load_model:
     model.load_state_dict(torch.load(str(model_path)))
 
 
-writer = SummaryWriter('runs')
+writer = SummaryWriter(storage.tensorboard_logdir() / storage.new_session().name)
 
 # choose optimal device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -44,23 +44,23 @@ else:
 
 # loss
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 # load data
 try:
 	testset = XYDataset.load(storage.datasets()[-1].test)
-except FileNotFoundError:
-	testset = xygen.spectraldataset(100)
+except (IndexError, FileNotFoundError):
+	testset = xygen.se_dataset(5000)
 	testset.save(storage.new_dataset() / "test")
 
 try:
 	trainset = XYDataset.load(storage.datasets()[-1].train)
-except FileNotFoundError:
-	trainset = xygen.spectraldataset(1000)
+except (IndexError, FileNotFoundError):
+	trainset = xygen.se_dataset(70000)
 	trainset.save(storage.new_dataset() / "train")
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-											shuffle=True, num_workers=0)
+											shuffle=True, num_workers=0, drop_last=True)
 
 testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
 											shuffle=True, num_workers=0)
@@ -73,16 +73,16 @@ writer.add_graph(model, iter(trainloader).next()[0].to(device))
 
 # hyperparameters
 print_every = 100
-epochs = 30
+epochs = 3000
 
 # training loop
-bar = trange(10000)
+bar = trange(epochs)
 val_loss = 0
 for epoch in bar:
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
         x, y = data
-        x += torch.randn_like(x) * 0.01
+        # x += torch.randn_like(x) * 0.04 * 0.01
 
         optimizer.zero_grad()
 
@@ -115,8 +115,8 @@ for epoch in bar:
         with torch.no_grad():
             writer.add_figure("predictions", plot_model(val_x[0].unsqueeze(0), val_y[0].unsqueeze(0), model, plot=False), global_step = epoch * len(trainloader))
 
-    # save model every 50 epochs
-    if epoch % 50 == 0:
+    # save model every 5 epochs
+    if epoch % 5 == 0:
         if not storage.new_session().exists():
             storage.new_session().mkdir()
         torch.save(model.state_dict(), str(storage.new_session() / "model_{}.pt".format(epoch)))

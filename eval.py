@@ -1,18 +1,18 @@
 import torch
 import torch.nn as nn
 from pathlib import Path
-from models import ConvCont
-from spectralgen import StorageSpectralDataset
-from storagemanager import StorageManager
-from plotting import plot_model
+from neural.models import ConvSEContX3L
+from neural.xydataset import XYDataset
+from neural.storagemanager import StorageManager
+from neural.plotting import plot_model
 
 storage = StorageManager()
 device = torch.device("cpu") # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-model = ConvCont().to(device)
+model = ConvSEContX3L().to(device)
 criterion = nn.MSELoss()
 
-testset = StorageSpectralDataset(storage.datasets()[-1].test)
+testset = XYDataset.load(storage.datasets()[-1].test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=1,
 											shuffle=True, num_workers=0)
 

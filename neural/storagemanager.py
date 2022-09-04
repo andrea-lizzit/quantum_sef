@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from collections import namedtuple
-from itertools import cache
+from functools import cache
 
 dataset_pair = namedtuple("dataset_pair", ["train", "test"])
 
@@ -15,7 +15,7 @@ class StorageManager():
 					version=1):
 		self.models_dir = Path(models_dir)
 		self.data_dir = Path(data_dir)
-		self.tbdir = tensorboard_logdir
+		self.tbdir = Path(tensorboard_logdir)
 		self.version = version
 
 	def sessions(self):

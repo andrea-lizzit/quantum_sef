@@ -21,3 +21,50 @@ DEBUG:pade.minimization:these are the singular values:
  1.88945691e+00 7.76810578e-01 9.68247932e-02 5.23173902e-03]
 INFO:pade.minimization:loss is high: 1986.0925317130689
 DEBUG:pade.minimization:Condition number of K (without preconditioning) is very high: 54027350148204.31
+
+
+
+
+Loading model from out/models/v1_2022-09-02_18-21-00/model.pt
+*[main][~/unsynced_desktop/tesi/quantum_sef]$ ./dyson.py neural /home/michele/Desktop/university/fisica/tesi/methane
+offset -0.020770349400458445 = -0.56519 + 0 / 2RY
+state 1; QSEF GW energy: -13.64193      starting: -20.18069     Quantum Espresso: -19.17415
+state 2; QSEF GW energy: -11.30916      starting: -14.42306     Quantum Espresso: -12.90888
+state 3; QSEF GW energy: -10.02119      starting: -14.42306     Quantum Espresso: -13.03748
+state 4; QSEF GW energy: -9.937116      starting: -14.42306     Quantum Espresso: -12.90973
+state 5; QSEF GW energy: 3.208652       starting: 0.90053       Quantum Espresso: 0.3360679
+
+Loading model from out/models/v1_2022-09-03_01-39-45/model_1100.pt
+*[main][~/unsynced_desktop/tesi/quantum_sef]$ ./dyson.py neural /home/michele/Desktop/university/fisica/tesi/methane
+offset -0.020770349400458445 = -0.56519 + 0 / 2RY
+state 1; QSEF GW energy: -24.61989      starting: -20.18069     Quantum Espresso: -19.17415
+state 2; QSEF GW energy: -7.095742      starting: -14.42306     Quantum Espresso: -12.90888
+state 3; QSEF GW energy: -9.54852       starting: -14.42306     Quantum Espresso: -13.03748
+state 4; QSEF GW energy: -13.62558      starting: -14.42306     Quantum Espresso: -12.90973
+state 5; QSEF GW energy: 0.7861186      starting: 0.90053       Quantum Espresso: 0.3360679
+
+x3l
+Loading model from out/models/v1_2022-09-03_11-32-52/model_25.pt
+state 1; QSEF GW energy: -14.48488      starting: -20.18069     Quantum Espresso: -19.17415
+state 2; QSEF GW energy: -11.98787      starting: -14.42306     Quantum Espresso: -12.90888
+state 3; QSEF GW energy: -15.15684      starting: -14.42306     Quantum Espresso: -13.03748
+state 4; QSEF GW energy: -13.13906      starting: -14.42306     Quantum Espresso: -12.90973
+state 5; QSEF GW energy: 1.961186       starting: 0.90053       Quantum Espresso: 0.3360679
+
+Loading model from out/models/v1_2022-09-03_11-32-52/model_45.pt
+*[main][~/unsynced_desktop/tesi/quantum_sef]$ ./dyson.py neural /home/michele/Desktop/university/fisica/tesi/methane
+offset -0.020770349400458445 = -0.56519 + 0 / 2RY
+state 1; QSEF GW energy: -15.7123       starting: -20.18069     Quantum Espresso: -19.17415
+state 2; QSEF GW energy: -12.64937      starting: -14.42306     Quantum Espresso: -12.90888
+state 3; QSEF GW energy: -12.4037       starting: -14.42306     Quantum Espresso: -13.03748
+state 4; QSEF GW energy: -10.99806      starting: -14.42306     Quantum Espresso: -12.90973
+state 5; QSEF GW energy: 0.1183818      starting: 0.90053       Quantum Espresso: 0.3360679
+
+Loading model from out/models/v1_2022-09-03_11-32-52/model_135.pt
+*[main][~/unsynced_desktop/tesi/quantum_sef]$ ./dyson.py neural /home/michele/Desktop/university/fisica/tesi/methane
+offset -0.020770349400458445 = -0.56519 + 0 / 2RY
+state 1; QSEF GW energy: -23.97507      starting: -20.18069     Quantum Espresso: -19.17415
+state 2; QSEF GW energy: -9.93817       starting: -14.42306     Quantum Espresso: -12.90888
+state 3; QSEF GW energy: -12.60911      starting: -14.42306     Quantum Espresso: -13.03748
+state 4; QSEF GW energy: -10.33072      starting: -14.42306     Quantum Espresso: -12.90973
+state 5; QSEF GW energy: 0.9978836      starting: 0.90053       Quantum Espresso: 0.3360679

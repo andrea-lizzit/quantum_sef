@@ -6,7 +6,10 @@ from pathlib import Path
 RY = 13.605693122994
 
 def load_gww_fit(filename):
-	""" Returns a list of MPParams from qe calculations, one for each orbital """
+	""" Returns a list of MPParams from qe calculations, one for each orbital
+
+	Args:
+		filename(str): the filneame of quantum-espresso's *gww.out file """
 	with open(filename, "r") as fd:
 		gww_out = fd.readlines()
 	gww_out = "".join(gww_out)
@@ -81,6 +84,8 @@ class QEDir():
 	""" Wrapper for quantum espresso data stored in files in a directory
 		It is assumed that the directory contains only files related to one compound """
 	def __init__(self, dir):
+		""" Args:
+			dir(str): the directory where quantum-espresso files are stored """
 		self.dir = Path(dir)
 		# save the names of the files in the directory
 		files = self.dir.iterdir()
