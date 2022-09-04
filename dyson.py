@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import numpy as np
+from neural.models import ConvSEContX3L
 from qe_utils import QEDir, load_qe_se
 import fit
 import logging
 from pade.model_pade import AverageModel, AverageSimilarModel, AverageLSModel
+from neural.storagemanager import StorageManager
 
 RY = 13.605693122994
 
@@ -72,6 +74,7 @@ if __name__ == "__main__":
 	p_a = subparsers.add_parser("gwwfit")
 	p_a.add_argument("self_energy", help="prefix and suffix of name of the file containing the self-energy values")
 	p_a.add_argument("--qe", action="store_true", help="use qe self-energy")
+	p_neural = subparsers.add_parser("neural")
 	args = parser.parse_args()
 	
 	qedir = QEDir(args.dir)
@@ -110,7 +113,22 @@ if __name__ == "__main__":
 				avgdiagmodel.plot(ax, z, s)
 				plt.show()
 			return avgdiagmodel
-			
+	if args.subparser == "neural":
+		import torch
+		def get_model(orbital):
+			qe_data = qedir.get_se(orbital)
+			z, s = qe_data["z"], qe_data["s"]
+			storage = StorageManager()
+			model = ConvSEContX3L()
+			model.load_state_dict(torch.load(storage.last_model()))
+			with torch.no_grad():
+				out = model(torch.tensor(np.stack([np.real(s), np.imag(s)]), dtype=torch.float32).unsqueeze(0))
+			self_on_real = out[0, 1] + 1j*out[0, 1]
+			def model_fun(inpz):
+				x = np.real(inpz)
+				return np.interp(x, np.linspace(-20, 20, 481), self_on_real)
+			return model_fun
+				
 	# orbitals = load_gww_energies(args.gww_out).keys()
 	for i in orbitals:
 		E[i]["GWC"] = GW(E[i], get_model(i), qedir.offset)
