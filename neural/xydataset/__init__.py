@@ -1,3 +1,4 @@
+from genericpath import exists
 import torch
 from pathlib import Path
 
@@ -15,8 +16,7 @@ class XYDataset():
 
 	def save(self, directory):
 		directory = Path(directory)
-		if not directory.exists():
-			directory.mkdir()
+		directory.mkdir(parents=True, exist_ok=True)
 		torch.save(torch.stack(self.xdata, dim=0), str(directory / "xdata.pt"))
 		torch.save(torch.stack(self.ydata, dim=0), str(directory / "ydata.pt"))
 

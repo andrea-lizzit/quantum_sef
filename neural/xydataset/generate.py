@@ -82,22 +82,24 @@ rng = np.random.default_rng()
 
 def se_dataset(mult=1000):
 	xdata, ydata = list(), list()
-	w = np.linspace(-20, 20, num=241)
+	w = np.linspace(-20, 20, num=481, dtype=np.complex64)
 	iw = np.linspace(0, 20, num=241)
 
-	for n in trange(1, 7):
+	for n in tqdm([4]):
 		for i in trange(mult*10):
 			# choose n poles at random and build the MPParams
 			poles = list()
-			for _ in range(n):
-				a = rng.standard_normal()*20 - 10
-				b = rng.random()*18 + 0.005
+			for j in range(n):
+				a = complex(*rng.standard_normal(2))*(0.4-0.02) + 0.02
+				b = complex(rng.random()*5+1, rng.random() * 0.37 + 0.05)
+				if j%2:
+					b *= -1
 				poles.append(mp.Pole(a, b))
 			bias = rng.random() * 4
 			params = mp.MPParams(bias, poles)
 			# sample the function on re and im axes
-			x = mp.multipole(iw, params)
+			x = mp.multipole(iw*1j, params)
 			y = mp.multipole(w, params)
 			xdata.append(torch.tensor(np.stack([np.real(x), np.imag(x)]), dtype=torch.float32, device=device))
-			ydata.append(torch.tensor(np.stack([np.real(y, np.imag(y))]), dtype=torch.float32, device=device))
+			ydata.append(torch.tensor(np.stack([np.real(y), np.imag(y)]), dtype=torch.float32, device=device))
 	return XYDataset(xdata, ydata)
